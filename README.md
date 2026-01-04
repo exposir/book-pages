@@ -1,58 +1,61 @@
-# 深度阅读档案馆
+# 📚 深度阅读档案馆
 
-这是一个书籍与思想深度分析网页项目，通过 GitHub Pages 部署为独立的在线阅读页面。
+书籍与思想深度分析网页项目，通过 GitHub Pages 部署为独立的在线阅读页面。
 
-## 在线访问
+## 🌐 在线访问
 
-🌐 **项目主页：** https://exposir.github.io/book-pages/
+**项目主页：** https://exposir.github.io/book-pages/
 
-### 页面列表
+## 📖 页面目录
 
-#### 红色赌盘系列
+### 红色赌盘系列
 
-- **章节详细版**：[red-roulette-chapters.html](https://exposir.github.io/book-pages/red-roulette-chapters.html)
-  多章节导航式深度解析，包含：封面、核心人物、温家宝专题、平安保险案、机场物流案、编年史、结局等独立页面
+| 页面                                                                            | 描述                                                                           |
+| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| [章节详细版](https://exposir.github.io/book-pages/red-roulette-chapters.html)   | 多章节导航式深度解析，含核心人物、温家宝专题、平安保险案、机场物流案、编年史等 |
+| [时间线分析版](https://exposir.github.io/book-pages/red-roulette-timeline.html) | 可视化分析版本，含关系网图、全景时间线、剧情解析、任务链等                     |
 
-- **时间线分析版**：[red-roulette-timeline.html](https://exposir.github.io/book-pages/red-roulette-timeline.html)
-  可视化分析版本，包含：关系网图（Mermaid）、全景时间线、剧情解析、任务链等分析工具
+### 思想史系列
 
-#### 思想史系列
+| 页面                                                                                 | 描述                             |
+| ------------------------------------------------------------------------------------ | -------------------------------- |
+| [八种社会思潮档案](https://exposir.github.io/book-pages/eight-thoughts-archive.html) | 当代中国八种社会思潮深度全景档案 |
 
-- **八种社会思潮档案**：[eight-thoughts-archive.html](https://exposir.github.io/book-pages/eight-thoughts-archive.html)
-  当代中国八种社会思潮深度全景档案，包含：历史编年、思潮分析、关键事件、代表人物等内容
+### 历史档案系列
 
-## 项目特点
+| 页面                                                                                          | 描述                                                     |
+| --------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| [莫斯科中山大学档案](https://exposir.github.io/book-pages/sun-yat-sen-university-moscow.html) | 盛岳回忆录深度解析，含人物图谱、历史时间线、权力关系网等 |
 
-- ✅ **零依赖部署** - 所有依赖通过 CDN 加载，无需 npm 或构建工具
-- ✅ **自包含设计** - 每个 HTML 文件都是独立完整的应用
-- ✅ **现代技术栈** - 使用 React + Tailwind CSS + Mermaid.js
-- ✅ **响应式设计** - 适配桌面和移动设备
-- ✅ **中文优化** - 针对中文内容优化排版和阅读体验
+## ✨ 项目特点
 
-## 技术架构
+- **零依赖部署** — 所有依赖通过 CDN 加载，无需构建工具
+- **自包含设计** — 每个 HTML 文件都是独立完整的应用
+- **现代技术栈** — React 18 + Tailwind CSS + Mermaid.js
+- **响应式设计** — 适配桌面和移动设备
+- **中文优化** — 针对中文内容优化排版和阅读体验
 
-每个页面都是完整的单页应用：
-- React 18 (UMD) - 通过 unpkg.com 加载
-- Babel Standalone - 浏览器端 JSX 编译
-- Tailwind CSS - CDN 方式引入
-- Mermaid.js - 用于关系图可视化
+## 🛠 技术架构
 
-## 更新内容
+```
+React 18 (UMD)        ─ unpkg.com CDN
+Babel Standalone      ─ 浏览器端 JSX 编译
+Tailwind CSS          ─ CDN 引入
+Mermaid.js            ─ 关系图可视化
+```
 
-如需添加或修改内容，只需编辑对应的 HTML 文件后推送：
+## 📝 更新内容
 
 ```bash
-git add .
-git commit -m "更新内容"
-git push
+git add . && git commit -m "更新内容" && git push
 ```
 
 GitHub Pages 会在 1-2 分钟内自动更新。
 
-## 开发说明
+## 📄 开发说明
 
-详细的开发指南请参考 [CLAUDE.md](CLAUDE.md)。
+详细开发指南请参考 [CLAUDE.md](CLAUDE.md)。
 
 ## License
 
-本项目用于学术研究和教育目的。内容基于《红色赌盘》一书的公开信息整理。
+本项目用于学术研究和教育目的。

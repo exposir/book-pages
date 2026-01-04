@@ -1,0 +1,745 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>红色赌盘 (Red Roulette) - 深度解析全书</title>
+
+    <!-- 1. 引入 Tailwind CSS (样式) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- 2. 配置 Import Map (让浏览器支持 import 语法) -->
+    <script type="importmap">
+      {
+        "imports": {
+          "react": "https://esm.sh/react@18.2.0",
+          "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+          "lucide-react": "https://esm.sh/lucide-react@0.263.1?external=react"
+        }
+      }
+    </script>
+
+    <!-- 3. 引入 Babel (编译 JSX) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+      /* 自定义滚动条样式以匹配暗黑主题 */
+      ::-webkit-scrollbar {
+        width: 10px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #020617;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #450a0a;
+        border-radius: 5px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #7f1d1d;
+      }
+      body {
+        background-color: #020617; /* Slate 950 */
+        color: #e2e8f0; /* Slate 200 */
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <!-- 4. 应用程序代码 -->
+    <script type="text/babel" data-type="module">
+      import React, { useState, useEffect } from 'react';
+      import { createRoot } from 'react-dom/client';
+      import {
+        BookOpen,
+        User,
+        Building,
+        AlertTriangle,
+        DollarSign,
+        Quote,
+        Menu,
+        X,
+        Eye,
+        Lock,
+        Globe,
+        Briefcase,
+        Calendar,
+        ChevronRight,
+        Scale,
+        Clock,
+        Star,
+        ShieldAlert,
+        FileText,
+        Search,
+        Users,
+        HeartHandshake,
+        PhoneIncoming,
+        Skull,
+      } from 'lucide-react';
+
+      // --- 组件：深度阅读卡片 (支持大量文本) ---
+      const DeepDiveCard = ({
+        title,
+        subtitle,
+        icon: Icon,
+        color,
+        children,
+        defaultOpen = false,
+      }) => {
+        const [isOpen, setIsOpen] = useState(defaultOpen);
+        return (
+          <div
+            className={`border rounded-xl overflow-hidden mb-6 transition-all duration-500 ${isOpen ? 'bg-slate-900 border-red-900/50 shadow-2xl' : 'bg-slate-900/50 border-slate-800'}`}
+          >
+            <button
+              onClick={() => setIsOpen(!isOpen)}
+              className="w-full p-6 flex items-start gap-4 text-left hover:bg-slate-800/50 transition-colors"
+            >
+              <div
+                className={`p-3 rounded-lg ${color} bg-opacity-20 text-white shrink-0`}
+              >
+                {Icon && <Icon size={24} />}
+              </div>
+              <div className="flex-1">
+                <h3 className="text-xl font-bold text-white mb-1 flex items-center gap-2">
+                  {title}
+                  {!isOpen && (
+                    <span className="text-xs font-normal text-gray-500 border border-gray-700 px-2 py-0.5 rounded ml-2">
+                      点击展开详情
+                    </span>
+                  )}
+                </h3>
+                <p
+                  className={`${isOpen ? 'text-amber-500' : 'text-gray-400'} text-sm font-medium`}
+                >
+                  {subtitle}
+                </p>
+              </div>
+              <ChevronRight
+                className={`text-gray-500 transform transition-transform duration-300 ${isOpen ? 'rotate-90' : ''}`}
+              />
+            </button>
+
+            {isOpen && (
+              <div className="px-8 pb-8 pt-2 text-gray-300 space-y-4 leading-loose border-t border-slate-800/50 animate-in fade-in slide-in-from-top-2">
+                {children}
+              </div>
+            )}
+          </div>
+        );
+      };
+
+      // --- 导航栏 ---
+      const Navbar = ({ currentPage, setPage, isMenuOpen, setIsMenuOpen }) => {
+        const navItems = [
+          { id: 'home', label: '封面' },
+          { id: 'characters', label: '沈栋与段伟红' },
+          { id: 'wen_family', label: '温家宝与张阿姨' },
+          { id: 'pingan', label: '平安案' },
+          { id: 'airport', label: '机场物流' }, // 重写
+          { id: 'timeline', label: '编年史' },
+          { id: 'ending', label: '结局' }, // 丰富
+        ];
+
+        return (
+          <nav className="fixed top-0 w-full z-50 bg-slate-950/95 backdrop-blur-md border-b border-white/10 shadow-xl">
+            <div className="max-w-7xl mx-auto px-4 lg:px-6 h-16 flex justify-between items-center">
+              <div
+                onClick={() => setPage('home')}
+                className="cursor-pointer flex items-center gap-3"
+              >
+                <div className="w-8 h-8 bg-red-700 rounded flex items-center justify-center text-white font-serif font-bold">
+                  R
+                </div>
+                <span className="hidden sm:block text-lg font-bold text-white tracking-wider">
+                  <span className="text-red-600">RED</span> ROULETTE
+                </span>
+              </div>
+
+              <div className="hidden lg:flex space-x-1">
+                {navItems.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setPage(item.id)}
+                    className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
+                      currentPage === item.id
+                        ? 'bg-red-900/30 text-red-400 border border-red-900/50'
+                        : 'text-gray-400 hover:text-white'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                className="lg:hidden text-white"
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+              >
+                {isMenuOpen ? <X /> : <Menu />}
+              </button>
+            </div>
+
+            {isMenuOpen && (
+              <div className="lg:hidden absolute top-16 left-0 w-full bg-slate-900 border-b border-gray-800 p-4 flex flex-col space-y-2">
+                {navItems.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      setPage(item.id);
+                      setIsMenuOpen(false);
+                    }}
+                    className="w-full text-left px-4 py-3 text-gray-300 hover:bg-slate-800 rounded"
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </nav>
+        );
+      };
+
+      // --- 页面: 首页 (重构版) ---
+      const HomePage = ({ setPage }) => (
+        <div className="min-h-screen pt-20 flex flex-col items-center justify-center text-center px-6 bg-[radial-gradient(ellipse_at_top,_#450a0a,_#020617_70%)]">
+          <div className="max-w-5xl mx-auto w-full">
+            <div className="inline-block px-4 py-1 mb-6 border border-red-500/30 rounded-full bg-red-900/20 text-red-400 text-xs tracking-widest uppercase animate-in fade-in slide-in-from-top-4 duration-700">
+              深度解析版 v2.0
+            </div>
+            <h1 className="text-5xl md:text-8xl font-serif font-bold text-white mb-6 leading-tight drop-shadow-2xl animate-in fade-in zoom-in duration-700">
+              红色<span className="text-red-600">赌盘</span>
+            </h1>
+            <p className="text-xl text-gray-300 mb-10 font-light leading-relaxed max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 delay-100">
+              当财富成为诱饵，权力成为筹码。
+              <br />
+              一场关于中国顶级权贵家族、商业野心与残酷复仇的真实记录。
+            </p>
+
+            {/* 主按钮组 */}
+            <div className="flex flex-col sm:flex-row justify-center gap-4 mb-16 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-200">
+              <button
+                onClick={() => setPage('timeline')}
+                className="px-8 py-4 bg-red-700 hover:bg-red-600 text-white rounded-md font-bold text-lg shadow-[0_0_20px_rgba(220,38,38,0.3)] hover:shadow-[0_0_30px_rgba(220,38,38,0.5)] transition-all flex items-center justify-center gap-2"
+              >
+                <Clock size={20} /> 进入全书编年史
+              </button>
+              <button
+                onClick={() => setPage('characters')}
+                className="px-8 py-4 bg-slate-800 hover:bg-slate-700 text-gray-200 border border-slate-700 hover:border-slate-600 rounded-md font-bold text-lg transition-all flex items-center justify-center gap-2"
+              >
+                <Users size={20} /> 解密核心人物
+              </button>
+            </div>
+
+            {/* 深度专题推荐 Grid */}
+            <div className="text-left mb-4">
+              <h3 className="text-gray-500 text-sm uppercase tracking-widest font-bold mb-4 text-center">
+                精选深度专题
+              </h3>
+            </div>
+            <div className="grid md:grid-cols-3 gap-6 text-left mb-12 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300">
+              {/* 专题1：温家宝 */}
+              <div
+                className="bg-slate-900/50 p-6 rounded-xl border border-slate-800 cursor-pointer hover:border-amber-600/50 hover:bg-slate-900/80 transition-all group"
+                onClick={() => setPage('wen_family')}
+              >
+                <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                  <Star className="text-amber-500" size={20} /> 权力核心
+                </h3>
+                <p className="text-gray-400 text-sm mb-4 line-clamp-2 group-hover:text-gray-300">
+                  温家宝家族内幕：张阿姨如何操盘，总理是否知情？
+                </p>
+                <span className="text-amber-500 text-xs font-bold flex items-center gap-1">
+                  点击阅读 <ChevronRight size={12} />
+                </span>
+              </div>
+
+              {/* 专题2：机场物流 */}
+              <div
+                className="bg-slate-900/50 p-6 rounded-xl border border-slate-800 cursor-pointer hover:border-emerald-600/50 hover:bg-slate-900/80 transition-all group"
+                onClick={() => setPage('airport')}
+              >
+                <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                  <Building className="text-emerald-500" size={20} /> 第一桶金
+                </h3>
+                <p className="text-gray-400 text-sm mb-4 line-clamp-2 group-hover:text-gray-300">
+                  复盘北京机场物流园案：如何利用特权破解体制死局。
+                </p>
+                <span className="text-emerald-500 text-xs font-bold flex items-center gap-1">
+                  点击阅读 <ChevronRight size={12} />
+                </span>
+              </div>
+
+              {/* 专题3：平安保险 */}
+              <div
+                className="bg-slate-900/50 p-6 rounded-xl border border-slate-800 cursor-pointer hover:border-blue-600/50 hover:bg-slate-900/80 transition-all group"
+                onClick={() => setPage('pingan')}
+              >
+                <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                  <DollarSign className="text-blue-500" size={20} /> 财富巅峰
+                </h3>
+                <p className="text-gray-400 text-sm mb-4 line-clamp-2 group-hover:text-gray-300">
+                  平安保险股权案：几十亿美金的代持与权力变现。
+                </p>
+                <span className="text-blue-500 text-xs font-bold flex items-center gap-1">
+                  点击阅读 <ChevronRight size={12} />
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+
+      // --- 页面: 核心人物 ---
+      const CharactersPage = () => (
+        <div className="min-h-screen pt-24 px-4 lg:px-6 max-w-5xl mx-auto pb-20">
+          <div className="mb-10 text-center">
+            <h2 className="text-4xl font-bold text-white mb-4">局中人</h2>
+            <p className="text-gray-400">
+              在这场赌局中，每个人都是筹码，也是玩家。
+            </p>
+          </div>
+
+          <DeepDiveCard
+            title="段伟红 (Whitney Duan)"
+            subtitle="从贫穷女孩到“权力掮客”的进化"
+            icon={User}
+            color="bg-red-600"
+            defaultOpen={true}
+          >
+            <p>
+              <strong className="text-white">1. 天赋异禀的社交天才：</strong>
+              <br />
+              段伟红出生于山东泰安的贫困家庭，曾读技校。她没有任何背景，全靠自己。沈栋形容她拥有惊人的记忆力和洞察力，能记住几年前见过一面的人的各种细节。她为了与权贵夫人（如张阿姨）有共同话题，会通宵阅读对方感兴趣的生僻书籍。
+            </p>
+            <p>
+              <strong className="text-white">2. “白手套”的最高境界：</strong>
+              <br />
+              她不是简单的代理人，她是“管家”。她不仅帮权贵赚钱，还帮他们解决生活琐事、子女上学、甚至家庭矛盾。这种全方位的服务建立了一种牢不可破的“信托”关系（Trust）。对于温家来说，她不仅仅是合伙人，更是“家里人”。
+            </p>
+          </DeepDiveCard>
+
+          <DeepDiveCard
+            title="沈栋 (Desmond Shum)"
+            subtitle="清醒的旁观者与操盘手"
+            icon={Briefcase}
+            color="bg-blue-600"
+          >
+            <p>
+              <strong className="text-white">1. 西方视角与中国规则：</strong>
+              <br />
+              出生上海，成长于香港，求学于美国。他带着西方的商业逻辑回到中国，却发现这里运行着完全不同的规则。他在这段关系中主要负责“落地”——将段伟红搞定的“关系”转化为具体的商业项目结构、融资和管理。
+            </p>
+            <p>
+              <strong className="text-white">2. 夫妻搭档的裂痕：</strong>
+              <br />
+              书中坦诚地描写了两人关系的破裂。段伟红越来越沉迷于权力的游戏，享受被高官簇拥的感觉，并要求沈栋完全服从；而沈栋则对这种依附于权力的生活感到越来越不安和厌倦。
+            </p>
+          </DeepDiveCard>
+        </div>
+      );
+
+      // --- 页面: 温家宝与张阿姨 ---
+      const WenFamilyPage = () => (
+        <div className="min-h-screen pt-24 px-4 lg:px-6 max-w-5xl mx-auto pb-20">
+          <div className="mb-10 text-center">
+            <h2 className="text-4xl font-bold text-white mb-4">
+              权力的核心：温家宝家族
+            </h2>
+            <p className="text-gray-400">
+              书中对于温家宝及其家人的描写极为细腻且具有多面性。
+            </p>
+          </div>
+
+          <DeepDiveCard
+            title="温家宝 (The Premier)"
+            subtitle="被蒙在鼓里的勤勉官僚，还是默许的受益者？"
+            icon={User}
+            color="bg-blue-600"
+            defaultOpen={true}
+          >
+            <p>
+              <strong className="text-white">1. 个性侧写：</strong>{' '}
+              书中描写的温家宝是一个典型的工作狂。生活简朴，早餐简单，衣着不讲究。在家庭晚宴上，他通常沉默寡言，显得疲惫，或者是谈论宏大的国家政策，完全不涉及生意。
+            </p>
+            <p>
+              <strong className="text-white">2. “不知情”的机制：</strong>{' '}
+              张阿姨和温家宝之间存在“防火墙”。她从不在家里谈论生意细节，也不让子女提钱。这种机制既“保护”了温家宝的清廉形象，也让他成为了家人敛财的招牌。
+            </p>
+          </DeepDiveCard>
+
+          <DeepDiveCard
+            title="张蓓莉 (张阿姨)"
+            subtitle="家族财富的总设计师"
+            icon={Star}
+            color="bg-amber-600"
+          >
+            <p>
+              <strong className="text-white">1. 真正的权力中心：</strong>{' '}
+              如果说温家宝是面子，张蓓莉就是里子。她极具控制欲和贪婪，但又极其谨慎。
+            </p>
+            <p>
+              <strong className="text-white">2. “30%”的抽成规则：</strong>{' '}
+              对于段伟红操盘的项目，张阿姨通常会拿走30%的利润。通过复杂的代持结构，这笔财富在法律上属于段伟红，但在实际控制权上属于温家。
+            </p>
+          </DeepDiveCard>
+        </div>
+      );
+
+      // --- 页面: 平安保险案 ---
+      const PingAnPage = () => (
+        <div className="min-h-screen pt-24 px-4 lg:px-6 max-w-5xl mx-auto pb-20">
+          <div className="mb-10 text-center">
+            <h2 className="text-4xl font-bold text-white mb-4">
+              核心案例：平安保险股权案
+            </h2>
+            <p className="text-gray-400">
+              这是全书最震撼的财富操作，也是《纽约时报》普利策奖报道的核心来源。
+            </p>
+          </div>
+
+          <div className="space-y-6">
+            <DeepDiveCard
+              title="1. 完美风暴：马明哲的危局 (2002)"
+              subtitle="为何平安急需这一笔“政治投资”？"
+              icon={AlertTriangle}
+              color="bg-orange-600"
+              defaultOpen={true}
+            >
+              <p>
+                2002年，平安保险正处于上市前的关键时期。外资大股东高盛和摩根士丹利急于套现。马明哲迫切需要一个“自己人”接盘，以保住控制权并获得政治保护伞。
+              </p>
+            </DeepDiveCard>
+
+            <DeepDiveCard
+              title="2. 核心机密：代持人名单"
+              subtitle="谁是这几十亿财富的影子主人？"
+              icon={Users}
+              color="bg-red-600"
+            >
+              <p>
+                泰鸿持有的股份绝大部分是替温家代持。段伟红使用了一系列温家亲戚的身份证来注册股份，包括温家宝的母亲杨志云。
+              </p>
+            </DeepDiveCard>
+
+            <DeepDiveCard
+              title="3. 监管绿灯与上市暴利"
+              subtitle="权力如何变现？"
+              icon={DollarSign}
+              color="bg-emerald-600"
+            >
+              <p>
+                在温家入局后，平安保险屡次获得“特批”，顺利上市。当初几千万投入变成了几十亿美元的市值。这不仅是投资成功，更是权力的溢价。
+              </p>
+            </DeepDiveCard>
+          </div>
+        </div>
+      );
+
+      // --- 页面: 机场物流园 (大幅重写) ---
+      const AirportPage = () => (
+        <div className="min-h-screen pt-24 px-4 lg:px-6 max-w-5xl mx-auto pb-20">
+          <div className="mb-10 text-center">
+            <h2 className="text-4xl font-bold text-white mb-4">
+              核心案例：北京机场物流园
+            </h2>
+            <p className="text-gray-400">
+              这是段伟红与沈栋的“第一桶金”。通过复盘这个项目，我们可以清晰地看到中国官僚体制的复杂性，以及顶级权贵是如何“降维打击”破解死局的。
+            </p>
+          </div>
+
+          <div className="grid gap-6">
+            <DeepDiveCard
+              title="1. 洞察：垃圾堆里的金矿"
+              subtitle="为什么选择做物流？"
+              icon={Search}
+              color="bg-slate-500"
+              defaultOpen={true}
+            >
+              <p>
+                2000年初，中国刚刚加入WTO，进出口贸易即将爆发。沈栋通过调研发现，首都机场的货运设施极其原始——货物堆在露天，分拣靠人工，效率极低。
+              </p>
+              <p>
+                <strong>商业逻辑：</strong>{' '}
+                如果能在这里建一个现代化的、自动化的物流中心，将垄断北京乃至华北的高端货运市场。这个想法很天才，但实现起来几乎是不可能的。
+              </p>
+            </DeepDiveCard>
+
+            <DeepDiveCard
+              title="2. 死局：三个婆婆打架"
+              subtitle="体制内的不可能三角"
+              icon={AlertTriangle}
+              color="bg-orange-600"
+              defaultOpen={true}
+            >
+              <p>
+                沈栋很快撞上了体制的墙。要在机场建项目，需要搞定三个互不统属、利益冲突的巨头：
+              </p>
+              <ul className="list-disc pl-5 space-y-2 border-l-2 border-orange-900/30 ml-2">
+                <li>
+                  <strong>顺义区政府：</strong>{' '}
+                  拥有土地。他们想把地卖给搞房地产的，赚快钱，对物流园没兴趣。
+                </li>
+                <li>
+                  <strong>首都机场集团（隶属民航总局）：</strong>{' '}
+                  拥有机场管理权。他们极其傲慢，认为“机场里的一草一木都是我的”，绝不允许私营企业插手核心业务。
+                </li>
+                <li>
+                  <strong>海关总署：</strong>{' '}
+                  拥有监管权。没有海关的批准，物流园就是个普通仓库，没有任何价值。
+                </li>
+              </ul>
+              <p className="mt-2 text-gray-400">
+                普通的商人，哪怕送再多钱，也无法协调这三个副部级/正部级单位的利益。项目陷入死局。
+              </p>
+            </DeepDiveCard>
+
+            <DeepDiveCard
+              title="3. 破局：张阿姨的“降维打击”"
+              subtitle="不仅是关系，是震慑"
+              icon={User}
+              color="bg-red-600"
+            >
+              <p>
+                段伟红出手了。她没有去送礼，而是安排了一场精心设计的“饭局”。
+              </p>
+              <p>
+                <strong>关键一役：</strong>{' '}
+                针对最难搞的首都机场集团董事长李培英（后来因贪腐被处决，但在当时是土皇帝），段伟红并没有低三下四。她安排张阿姨在一个半公开的场合与李培英“偶遇”，或者在关键时刻让李培英听到她与张阿姨通电话的语气——那是家人般的随意。
+              </p>
+              <p>
+                <strong>心理战：</strong>{' '}
+                对于李培英这样的官僚，他对上级权力的嗅觉极其灵敏。当他意识到段伟红是“温总理家的人”时，所有的傲慢瞬间消失。不仅一路绿灯，甚至主动配合段伟红去压服其他部门。这就是权力的“降维打击”。
+              </p>
+            </DeepDiveCard>
+
+            <DeepDiveCard
+              title="4. 特权：定制化的“海关直通车”"
+              subtitle="如何制造垄断？"
+              icon={Lock}
+              color="bg-blue-600"
+            >
+              <p>
+                光有地还不够。为了让物流园具有不可替代性，沈栋提出要在园区内设立
+                <strong>“海关监管点”</strong>。这在当时是极大的特权。
+              </p>
+              <p>
+                这意味着货物下了飞机，不需在机场拥挤的货站排队，直接拉到沈栋的物流园再报关。速度快了3-5天。对于英特尔、三星这种运芯片的客户，时间就是生命。
+              </p>
+              <p>
+                <strong>操作：</strong>{' '}
+                又是通过温家的影响力，直接协调了海关总署。北京海关破例入驻私营物流园办公。这一纸批文，实际上赋予了该项目行政垄断权。
+              </p>
+            </DeepDiveCard>
+
+            <DeepDiveCard
+              title="5. 收割：完美的套现"
+              subtitle="把项目卖给外资"
+              icon={DollarSign}
+              color="bg-emerald-600"
+            >
+              <p>
+                项目建成后，正如沈栋预料，成为了亚洲最繁忙的货运站。但他们并不打算长期运营赚辛苦钱。
+              </p>
+              <p>
+                2008年奥运会前后，物流资产估值达到顶峰。他们将项目打包出售给了新加坡的物流巨头
+                <strong>普洛斯 (GLP)</strong>。
+              </p>
+              <p>
+                <strong>结局：</strong>{' '}
+                投入的几千万启动资金（大部分还是银行贷款），变成了数亿美元的现金回报。温家通过背后的股份结构，分走了约30%的利润。这是一次完美的“权力-特权-垄断-套现”闭环。
+              </p>
+            </DeepDiveCard>
+          </div>
+        </div>
+      );
+
+      // --- 页面: 编年史 (Timeline) ---
+      const TimelinePage = () => {
+        const events = [
+          {
+            year: '1990s',
+            title: '相识与野心',
+            desc: '沈栋（香港背景）与段伟红（山东背景）在北京相遇。两人性格互补，段伟红拥有惊人的社交野心，沈栋拥有商业执行力，决定合伙。',
+          },
+          {
+            year: '2002',
+            title: '攀上巅峰关系',
+            desc: '段伟红通过精心布局，赢得了“张阿姨”（温家宝夫人张蓓莉）的绝对信任。这成为商业帝国起飞的关键转折点。',
+          },
+          {
+            year: '2003',
+            title: '第一桶金：机场物流园',
+            desc: '依托政治关系，拿下北京首都机场货运物流中心开发权。通过搞定海关和民航总局，打破体制壁垒，获得垄断优势。',
+          },
+          {
+            year: '2004',
+            title: '平安保险入股',
+            desc: '受马明哲之托，段伟红成立泰鸿投资，代温家持有平安保险原始股。这是一笔日后价值几十亿美元的交易。',
+          },
+          {
+            year: '2008',
+            title: '奥运与巅峰',
+            desc: '随着北京奥运会的举办，机场物流项目价值暴涨。两人将项目出售给新加坡普洛斯，成功套现离场，身价暴增。',
+          },
+          {
+            year: '2012',
+            title: '《纽约时报》事件',
+            desc: '外媒曝光温家宝家族财富。泰鸿公司与温家亲戚的代持关系被公开，引发巨大的政治危机。段伟红试图公关未果，陷入恐慌。',
+          },
+          {
+            year: '2014',
+            title: '分道扬镳',
+            desc: '沈栋对国内政治环境感到绝望，选择移居英国。段伟红选择留守，并继续运作宝格丽酒店（Genesis Beijing）项目，试图转型为慈善家。',
+          },
+          {
+            year: '2017.09.05',
+            title: '突然消失',
+            desc: '段伟红在北京办公室被国安人员带走，从此音讯全无。没有逮捕令，没有通知家属。她成为了政治斗争的牺牲品。',
+          },
+          {
+            year: '2021',
+            title: '《红色赌盘》出版',
+            desc: '为了保护家人，沈栋决定打破沉默出版此书。出版前夕，失踪四年的段伟红突然打来电话，威胁他不要出书，证实其仍受控于当局。',
+          },
+        ];
+
+        return (
+          <div className="min-h-screen pt-24 px-4 lg:px-6 max-w-5xl mx-auto pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="mb-12 text-center">
+              <h2 className="text-4xl font-bold text-white mb-4">帝国编年史</h2>
+              <p className="text-gray-400">
+                从野心勃勃的创业者到权力的牺牲品：全书故事脉络
+              </p>
+            </div>
+
+            <div className="space-y-8 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-red-800 before:to-transparent">
+              {events.map((evt, idx) => (
+                <div
+                  key={idx}
+                  className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group"
+                >
+                  <div className="flex items-center justify-center w-10 h-10 rounded-full border border-slate-900 bg-slate-800 text-red-500 shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10">
+                    <Clock size={18} />
+                  </div>
+                  <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-slate-900 p-6 rounded-xl border border-slate-800 shadow-xl hover:border-red-900/50 transition-colors">
+                    <div className="flex items-center justify-between space-x-2 mb-2">
+                      <div className="font-bold text-white text-lg">
+                        {evt.title}
+                      </div>
+                      <time className="font-mono text-red-400 text-sm font-bold">
+                        {evt.year}
+                      </time>
+                    </div>
+                    <div className="text-gray-400 text-sm leading-relaxed">
+                      {evt.desc}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      };
+
+      // --- 页面: 结局 (丰富版) ---
+      const EndingPage = () => (
+        <div className="min-h-screen pt-24 px-4 pb-20 flex flex-col items-center justify-center text-center">
+          <ShieldAlert className="w-24 h-24 text-red-600 mb-8 animate-pulse" />
+          <h2 className="text-4xl font-bold text-white mb-6">赌局的终结</h2>
+          <div className="max-w-3xl text-left bg-slate-900 p-8 rounded-xl border border-red-900/50 space-y-6">
+            <DeepDiveCard
+              title="2017：无声的消失"
+              subtitle="当国家机器启动"
+              icon={Skull}
+              color="bg-gray-700"
+              defaultOpen={true}
+            >
+              <p>
+                2017年9月5日，段伟红在北京的办公室失踪。没有警察，没有法律程序。随同她一起消失的还有两名保姆。在之后的四年里，她仿佛人间蒸发。沈栋多方打听，只知道她被“有关部门”带走了，涉及孙政才案。
+              </p>
+            </DeepDiveCard>
+
+            <DeepDiveCard
+              title="2021：来自“地狱”的电话"
+              subtitle="全书最令人毛骨悚然的时刻"
+              icon={PhoneIncoming}
+              color="bg-red-700"
+              defaultOpen={true}
+            >
+              <p>
+                就在《红色赌盘》英文版即将出版的前夕，沈栋的手机突然响了。是失踪四年的段伟红。
+              </p>
+              <p>
+                <strong>威胁与操控：</strong>{' '}
+                她的声音听起来很疲惫，但逻辑清晰。她要求沈栋停止出版这本书。她说：“如果你出了这本书，会激怒政府，对我们的儿子不好。”她甚至警告沈栋，如果他一意孤行，他将“没有好下场”。
+              </p>
+              <p>
+                沈栋意识到，这通电话是在监控下打的。段伟红是被迫念出这些台词，用来作为阻止真相曝光的最后筹码。这反而让他更坚定了出版的决心——因为这意味着，只要书还没出，她就有价值；书一旦出了，全世界的关注才是她唯一的保命符。
+              </p>
+            </DeepDiveCard>
+
+            <div className="bg-red-900/20 p-6 rounded border-l-4 border-red-600 mt-6">
+              <p className="text-white font-serif italic text-lg">
+                “在中国，权力赋予你的一切，权力随时可以拿走。没有法治，就没有真正的私有财产，甚至没有真正的人身安全。”
+              </p>
+              <p className="text-right text-gray-400 text-sm mt-2">
+                —— 沈栋 (Desmond Shum)
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+
+      // --- 主控制器 ---
+      const RedRouletteApp = () => {
+        const [currentPage, setPage] = useState('home');
+        const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+        useEffect(() => {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }, [currentPage]);
+
+        const renderPage = () => {
+          switch (currentPage) {
+            case 'home':
+              return <HomePage setPage={setPage} />;
+            case 'characters':
+              return <CharactersPage />;
+            case 'wen_family':
+              return <WenFamilyPage />;
+            case 'pingan':
+              return <PingAnPage />;
+            case 'airport':
+              return <AirportPage />;
+            case 'timeline':
+              return <TimelinePage />;
+            case 'ending':
+              return <EndingPage />;
+            default:
+              return <HomePage setPage={setPage} />;
+          }
+        };
+
+        return (
+          <div className="bg-slate-950 min-h-screen text-slate-200 font-sans selection:bg-red-900 selection:text-white pb-10">
+            <Navbar
+              currentPage={currentPage}
+              setPage={setPage}
+              isMenuOpen={isMenuOpen}
+              setIsMenuOpen={setIsMenuOpen}
+            />
+            <main className="animate-in fade-in duration-500">
+              {renderPage()}
+            </main>
+          </div>
+        );
+      };
+
+      // 渲染 React 应用
+      const root = createRoot(document.getElementById('root'));
+      root.render(<RedRouletteApp />);
+    </script>
+  </body>
+</html>

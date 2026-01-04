@@ -1,0 +1,641 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>红色赌盘 (Red Roulette) 深度解析</title>
+
+    <!-- 1. 引入 React 和 ReactDOM -->
+    <script
+      crossorigin
+      src="https://unpkg.com/react@18/umd/react.production.min.js"
+    ></script>
+    <script
+      crossorigin
+      src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"
+    ></script>
+
+    <!-- 2. 引入 Babel 用于解析 JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- 3. 引入 Tailwind CSS (CDN版本) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- 4. 引入 Mermaid 用于绘图 -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+
+    <style>
+      /* 自定义动画 */
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .animate-fade-in {
+        animation: fadeIn 0.5s ease-out forwards;
+      }
+      /* 隐藏滚动条但保留功能 */
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+    </style>
+  </head>
+  <body class="bg-slate-100 text-slate-900">
+    <div id="root"></div>
+
+    <script type="text/babel">
+      const { useState, useEffect, useRef } = React;
+
+      // --- 图标组件 (内联 SVG 以避免依赖) ---
+      const Icons = {
+        BookOpen: (props) => (
+          <svg
+            {...props}
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+          </svg>
+        ),
+        Clock: (props) => (
+          <svg
+            {...props}
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+        ),
+        Target: (props) => (
+          <svg
+            {...props}
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="12" cy="12" r="10"></circle>
+            <circle cx="12" cy="12" r="6"></circle>
+            <circle cx="12" cy="12" r="2"></circle>
+          </svg>
+        ),
+        Network: (props) => (
+          <svg
+            {...props}
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <rect x="16" y="16" width="6" height="6" rx="1"></rect>
+            <rect x="2" y="16" width="6" height="6" rx="1"></rect>
+            <rect x="9" y="2" width="6" height="6" rx="1"></rect>
+            <path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"></path>
+            <path d="M12 12V8"></path>
+          </svg>
+        ),
+        User: (props) => (
+          <svg
+            {...props}
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+        ),
+        AlertTriangle: (props) => (
+          <svg
+            {...props}
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+        ),
+        Award: (props) => (
+          <svg
+            {...props}
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="12" cy="8" r="7"></circle>
+            <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline>
+          </svg>
+        ),
+        ArrowRight: (props) => (
+          <svg
+            {...props}
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+            <polyline points="12 5 19 12 12 19"></polyline>
+          </svg>
+        ),
+      };
+
+      // --- 数据 ---
+      const TIMELINE_DATA = [
+        {
+          year: '1968 - 1990s',
+          title: '早期背景与野蛮生长',
+          content:
+            "沈栋出生于上海，后随父母迁居香港，并在美国接受教育，形成了典型的'海归'精英视角。与此同时，段伟红（Whitney）在天津起步，展现出惊人的社交天赋和对权力的敏锐嗅觉。她在早期生意中积累了第一桶金，并深刻领悟到在中国做生意，'关系'（Guanxi）是入场券。",
+        },
+        {
+          year: '2002 - 2003',
+          title: '宿命般的相遇与合伙',
+          content:
+            "沈栋与段伟红相识。沈栋拥有西方金融知识和执行力；段伟红拥有打通体制内高层的'现实扭曲力场'。两人结为夫妻（战略同盟）。此时，段伟红已通过极其隐秘的社交网络，接近了当时政坛核心人物温家宝的夫人——张培莉（张阿姨）。",
+        },
+        {
+          year: '2004 - 2005',
+          title: '首都机场物流园战役',
+          content:
+            "两人试图拿下北京首都机场的物流园项目（BACL）。遭遇首都机场集团总经理李培英的强力阻击。段伟红启动了'核武器'——张阿姨的影响力。通过高层隐晦暗示，李培英被迫退让。这是沈栋第一次见识到最高权力碾压中层官僚的效率。",
+        },
+        {
+          year: '2006 - 2010',
+          title: "镀金时代与'白手套'的巅峰",
+          content:
+            "BACL项目大获成功，随后开发了北京著名的'创世纪'项目，引进宝格丽酒店。他们成为'张阿姨'的财富管家（白手套）。通过代持股份（如平安保险上市前的股份操作），帮助权贵家族变现。生活极度奢靡，但也开始察觉到'特许权'的脆弱。",
+        },
+        {
+          year: '2012',
+          title: '《纽约时报》事件与转折点',
+          content:
+            "大卫·巴博萨在《纽约时报》发表关于温家财富的调查报道，披露了段伟红作为中间人持有的巨额股份。沈栋和段伟红从座上宾变成敏感人物。原本的保护伞出现巨大裂痕，'闷声发大财'时代终结。",
+        },
+        {
+          year: '2013 - 2015',
+          title: '新时代的清洗与离婚',
+          content:
+            "反腐运动展开，旧有政治默契被打破。段伟红自信能凭人脉度过难关，选择留下；沈栋充满不安全感，两人因对未来判断分歧而离婚。沈栋开始转移资产并移居海外，这种'逃跑主义'最终救了他。",
+        },
+        {
+          year: '2017 - Present',
+          title: '消失与出版',
+          content:
+            '2017年9月5日，段伟红在北京街头突然人间蒸发。沈栋在英国为了保护儿子，也为了给前妻一个交代，写下这本书。2021年出版前夕，失踪四年的段伟红突然来电要求停止出版，反而证实了她被控制的事实。',
+        },
+      ];
+
+      const PLOT_ANALYSIS = [
+        {
+          stage: 'Stage I: 入局 (The Setup)',
+          theme: '阶级跃升的渴望',
+          detail:
+            "沈栋（西方思维）被段伟红（本土野蛮生长智慧）吸引。关键转折：两人决定走'权力依附'路线。他们意识到法律只是参考线，人脉才是生命线。精心攻略'张阿姨'，通过全方位的情感投入进入核心圈层。",
+        },
+        {
+          stage: 'Stage II: 交易 (The Exchange)',
+          theme: '权力寻租的具象化',
+          detail:
+            "围绕机场物流园和顺义土地开发。核心机制：权贵不出面、不出钱、不签字，只提供'影响力'。段伟红负责所有执行和风险，收益大头归权贵代持人。揭示了通过壳公司掩盖真实受益人的操作手法。",
+        },
+        {
+          stage: 'Stage III: 傲慢 (The Hubris)',
+          theme: '权力的致幻剂',
+          detail:
+            '财富暴涨，打造顶级社交中心。伏笔揭晓：段伟红过度自信，认为自己是权力的合伙人而非依附者，甚至试图影响政策。夫妻关系疏离，利益捆绑代替了情感共鸣。',
+        },
+        {
+          stage: 'Stage IV: 崩塌 (The Crash)',
+          theme: '极权体系下的毁灭',
+          detail:
+            '反腐行动开始，身边富豪官员接连消失。《纽约时报》报道后，段伟红的消失揭示了系统逻辑：当需要牺牲品时，白手套是第一批被抛弃的。沈栋的书写是对这个系统最后的反叛。',
+        },
+      ];
+
+      const QUEST_CHAIN = [
+        {
+          title: '建立护城河',
+          goal: '获得张阿姨（温家）的绝对信任',
+          difficulty: 'S-Tier',
+          obstacle: '张阿姨生性多疑，且身边围绕无数攀附者。',
+          solution: "提供'全方位生活管家服务'，扮演女儿、秘书、顾问多重角色。",
+          reward: '通往中国最高商业机会的VIP门票。',
+        },
+        {
+          title: '拿下机场物流园',
+          goal: '无土地指标下获得机场旁黄金地块。',
+          difficulty: 'A-Tier',
+          obstacle: '首都机场集团总经理李培英的强力阻挠。',
+          solution: '降维打击。动用高层关系向民航总局施压，迫使李培英就范。',
+          reward: '数亿美元资产增值，确立行业地位。',
+        },
+        {
+          title: '平安着陆',
+          goal: '在政治风暴中保全性命和资产。',
+          difficulty: 'God-Tier',
+          obstacle: '国家机器的边控、资产冻结及封口需求。',
+          solution:
+            "利用'离婚'切割；利用海外舆论杠杆；出版此书作为'死亡开关'。",
+          reward: '沈栋获得流亡的自由，段伟红任务失败。',
+        },
+      ];
+
+      const MERMAID_CODE = `graph TD
+            Desmond["沈栋 Desmond"] 
+            Whitney["段伟红 Whitney"]
+            AuntieZhang["张阿姨 (温家)"]
+            BACL["北京航空城物流 BACL"]
+            Genesis["凯宾斯基/创世纪"]
+            StoneCapital["泰鸿投资"]
+            PingAn["平安保险"]
+            LiPeiying["李培英 (首都机场)"]
+            CCDI["中纪委"]
+            NYT["纽约时报"]
+
+            Desmond <-->|前夫妻/合伙人| Whitney
+            Whitney <-->|超级白手套| AuntieZhang
+            Desmond -->|运营| BACL
+            Whitney -->|运营| BACL
+            Desmond -->|开发| Genesis
+            Whitney -->|开发| Genesis
+            Whitney -->|控制| StoneCapital
+            StoneCapital -.->|隐秘持股| PingAn
+            LiPeiying --x|阻碍| BACL
+            AuntieZhang -->|施压| LiPeiying
+            NYT --x|2012曝光| AuntieZhang
+            CCDI -->|2017拘留| Whitney
+            Desmond -->|爆料| NYT
+        `;
+
+      // --- 子组件 ---
+
+      const SectionTitle = ({ icon: Icon, title, subtitle }) => (
+        <div className="mb-6 border-b border-red-800/20 pb-4">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-red-900 text-white rounded-lg">
+              <Icon size={24} />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
+          </div>
+          {subtitle && <p className="text-gray-600 ml-12 italic">{subtitle}</p>}
+        </div>
+      );
+
+      const MermaidChart = () => {
+        useEffect(() => {
+          mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+          mermaid.contentLoaded();
+        }, []);
+        return (
+          <div className="mermaid bg-white p-4 rounded-lg shadow border border-slate-200 flex justify-center overflow-x-auto">
+            {MERMAID_CODE}
+          </div>
+        );
+      };
+
+      const TimelineItem = ({ data, isLast }) => (
+        <div className="relative pl-8 md:pl-0 md:grid md:grid-cols-12 gap-8 group">
+          <div
+            className={`absolute left-0 top-0 bottom-0 w-0.5 bg-gray-200 md:left-1/2 md:-ml-px ${isLast ? 'h-full' : ''}`}
+          ></div>
+          <div className="absolute left-[-5px] top-6 w-3 h-3 bg-red-600 rounded-full border-2 border-white md:left-1/2 md:-ml-1.5 shadow-sm group-hover:scale-125 transition-transform z-10"></div>
+          <div className="md:col-span-5 md:text-right mb-2 md:mb-0 pt-5">
+            <span className="inline-block px-3 py-1 bg-red-100 text-red-800 text-sm font-bold rounded-full font-mono">
+              {data.year}
+            </span>
+          </div>
+          <div className="md:col-span-7 pt-4 pb-12">
+            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow relative">
+              <div className="hidden md:block absolute left-[-8px] top-7 w-4 h-4 bg-white border-l border-b border-gray-100 transform rotate-45"></div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">
+                {data.title}
+              </h3>
+              <p className="text-gray-700 leading-relaxed text-justify text-sm">
+                {data.content}
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+
+      const PlotCard = ({ data, index }) => (
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+          <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+            <h3 className="font-bold text-lg text-slate-800">{data.stage}</h3>
+            <span className="px-3 py-1 bg-slate-200 text-slate-700 text-xs rounded-full uppercase tracking-wider font-semibold">
+              {data.theme}
+            </span>
+          </div>
+          <div className="p-6 flex gap-4">
+            <div className="text-4xl text-slate-200 font-serif font-bold select-none">
+              {index + 1}
+            </div>
+            <p className="text-gray-700 leading-7 text-justify">
+              {data.detail}
+            </p>
+          </div>
+        </div>
+      );
+
+      const QuestCard = ({ quest }) => (
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-l-4 border-l-amber-500 border-gray-200 mb-6">
+          <div className="flex justify-between items-start mb-4">
+            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+              <Icons.Target className="text-amber-600" size={20} />
+              {quest.title}
+            </h3>
+            <span className="px-3 py-1 bg-amber-100 text-amber-800 text-xs font-bold rounded">
+              难度: {quest.difficulty}
+            </span>
+          </div>
+          <div className="space-y-4">
+            <div className="flex gap-3 items-start">
+              <div className="mt-1 min-w-[24px]">
+                <Icons.User size={18} className="text-blue-500" />
+              </div>
+              <div>
+                <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">
+                  目标
+                </span>
+                <p className="text-sm font-medium text-gray-800">
+                  {quest.goal}
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3 items-start">
+              <div className="mt-1 min-w-[24px]">
+                <Icons.AlertTriangle size={18} className="text-red-500" />
+              </div>
+              <div>
+                <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">
+                  阻碍
+                </span>
+                <p className="text-sm text-gray-600">{quest.obstacle}</p>
+              </div>
+            </div>
+            <div className="flex gap-3 items-start">
+              <div className="mt-1 min-w-[24px]">
+                <Icons.Network size={18} className="text-purple-500" />
+              </div>
+              <div>
+                <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">
+                  策略
+                </span>
+                <p className="text-sm text-gray-600">{quest.solution}</p>
+              </div>
+            </div>
+            <div className="mt-4 pt-4 border-t border-gray-100 flex items-center gap-2">
+              <Icons.Award size={16} className="text-green-600" />
+              <span className="text-xs font-bold text-gray-400 uppercase">
+                结果:
+              </span>
+              <span className="text-sm text-green-700 font-medium">
+                {quest.reward}
+              </span>
+            </div>
+          </div>
+        </div>
+      );
+
+      // --- 主程序 ---
+      function App() {
+        const [activeTab, setActiveTab] = useState('mindmap');
+
+        const renderContent = () => {
+          switch (activeTab) {
+            case 'mindmap':
+              return (
+                <div className="animate-fade-in">
+                  <SectionTitle
+                    icon={Icons.Network}
+                    title="权力与利益网络"
+                    subtitle="The Architecture of Influence - 基于书中的社会关系学分析"
+                  />
+                  <MermaidChart />
+                  <div className="mt-8 grid md:grid-cols-2 gap-6">
+                    <div className="bg-red-50 p-6 rounded-lg border border-red-100">
+                      <h4 className="font-bold text-red-900 mb-2">
+                        核心机制：代持
+                      </h4>
+                      <p className="text-sm text-red-800 leading-relaxed">
+                        核心逻辑并非简单的行贿，而是“干股”与“代持”。段伟红通过理财、投资将资本增值合法化。这是一种基于信任而非合同的脆弱联盟。
+                      </p>
+                    </div>
+                    <div className="bg-slate-50 p-6 rounded-lg border border-slate-200">
+                      <h4 className="font-bold text-slate-900 mb-2">潜规则</h4>
+                      <p className="text-sm text-slate-700 leading-relaxed">
+                        1. 永远不要让领导签字。
+                        <br />
+                        2. 只有在对方退休后才安全（2012年后失效）。
+                        <br />
+                        3. 白手套必须隐形，曝光即弃子。
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            case 'timeline':
+              return (
+                <div className="animate-fade-in">
+                  <SectionTitle
+                    icon={Icons.Clock}
+                    title="全景时间线"
+                    subtitle="Chronicle of Rise and Fall"
+                  />
+                  <div className="mt-8">
+                    {TIMELINE_DATA.map((item, index) => (
+                      <TimelineItem
+                        key={index}
+                        data={item}
+                        isLast={index === TIMELINE_DATA.length - 1}
+                      />
+                    ))}
+                  </div>
+                </div>
+              );
+            case 'plot':
+              return (
+                <div className="animate-fade-in">
+                  <SectionTitle
+                    icon={Icons.BookOpen}
+                    title="深度剧情解析"
+                    subtitle="Deconstruction of Stages"
+                  />
+                  <div className="max-w-4xl mx-auto">
+                    {PLOT_ANALYSIS.map((item, index) => (
+                      <PlotCard key={index} data={item} index={index} />
+                    ))}
+                  </div>
+                </div>
+              );
+            case 'quests':
+              return (
+                <div className="animate-fade-in">
+                  <SectionTitle
+                    icon={Icons.Target}
+                    title="核心任务链"
+                    subtitle="Objectives & Obstacles - 商业冒险中的RPG逻辑"
+                  />
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {QUEST_CHAIN.map((quest, index) => (
+                      <div key={index}>
+                        <QuestCard quest={quest} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            default:
+              return null;
+          }
+        };
+
+        return (
+          <div className="min-h-screen bg-slate-100 font-sans text-slate-900">
+            <header className="bg-slate-900 text-white shadow-lg sticky top-0 z-50">
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="flex justify-between items-center h-16">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-red-600 rounded flex items-center justify-center font-bold font-serif">
+                      R
+                    </div>
+                    <div>
+                      <h1 className="text-lg font-bold tracking-wide">
+                        RED ROULETTE
+                      </h1>
+                      <p className="text-[10px] text-gray-400 uppercase tracking-widest">
+                        Deep Analysis Repository
+                      </p>
+                    </div>
+                  </div>
+                  <nav className="hidden md:flex space-x-1">
+                    {[
+                      { id: 'mindmap', label: '关系网', icon: Icons.Network },
+                      { id: 'timeline', label: '时间线', icon: Icons.Clock },
+                      { id: 'plot', label: '剧情解析', icon: Icons.BookOpen },
+                      { id: 'quests', label: '任务链', icon: Icons.Target },
+                    ].map((tab) => (
+                      <button
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id)}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === tab.id ? 'bg-red-700 text-white' : 'text-gray-300 hover:bg-slate-800 hover:text-white'}`}
+                      >
+                        <tab.icon size={16} />
+                        {tab.label}
+                      </button>
+                    ))}
+                  </nav>
+                </div>
+              </div>
+              {/* Mobile Nav */}
+              <div className="md:hidden border-t border-slate-800 overflow-x-auto">
+                <div className="flex px-2 py-2 gap-2 min-w-max">
+                  {[
+                    { id: 'mindmap', label: '关系网' },
+                    { id: 'timeline', label: '时间线' },
+                    { id: 'plot', label: '剧情' },
+                    { id: 'quests', label: '任务' },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium ${activeTab === tab.id ? 'bg-red-600 text-white' : 'bg-slate-800 text-gray-300'}`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </header>
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+              <div className="bg-white rounded-2xl shadow-xl min-h-[80vh] overflow-hidden">
+                <div className="bg-gradient-to-r from-slate-900 to-slate-800 p-8 text-white relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-red-600 opacity-5 rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2"></div>
+                  <div className="relative z-10">
+                    <h1 className="text-3xl font-serif font-bold mb-2">
+                      红色赌盘：权力、腐败与复仇
+                    </h1>
+                    <p className="text-slate-300 max-w-2xl text-sm leading-relaxed">
+                      解构沈栋（Desmond
+                      Shum）回忆录中的权力运作逻辑。揭示“党国资本主义”下企业家作为“白手套”的依附性与脆弱性。
+                    </p>
+                  </div>
+                </div>
+                <div className="p-6 md:p-10">{renderContent()}</div>
+              </div>
+            </main>
+            <footer className="bg-slate-900 text-slate-500 py-8 mt-12 text-center text-xs">
+              <p>
+                Analysis based on "Red Roulette". Academic Research Use Only.
+              </p>
+            </footer>
+          </div>
+        );
+      }
+
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(<App />);
+    </script>
+  </body>
+</html>

@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>当代中国八种社会思潮 - 深度全景档案</title>
+    
+    <!-- 核心样式库 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React 生态 -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- 图表渲染 Mermaid -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+
+    <!-- 字体配置: 营造学术/出版物阅读体验 -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+        
+        :root {
+            --color-bg: #f5f5f4;
+            --color-paper: #ffffff;
+            --color-ink: #1c1917;
+        }
+
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background-color: var(--color-bg);
+            color: var(--color-ink);
+            overflow: hidden; /* 防止双滚动条 */
+        }
+        
+        .font-serif { font-family: 'Noto Serif SC', serif; }
+        
+        /* 自定义滚动条 - 极简风格 */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #a8a29e; border-radius: 20px; }
+        
+        /* 卡片翻转效果 */
+        .perspective-1000 { perspective: 1000px; }
+        .transform-style-3d { transform-style: preserve-3d; }
+        .backface-hidden { backface-visibility: hidden; }
+        .rotate-y-180 { transform: rotateY(180deg); }
+        
+        /* Mermaid 容器样式 */
+        .mermaid svg { max-width: 100%; height: auto; }
+
+        /* 动画 */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.6s ease-out forwards; }
+        
+        /* 文章阅读样式 */
+        .prose p { margin-bottom: 1.2em; line-height: 1.8; text-align: justify; }
+        .drop-cap::first-letter {
+            font-size: 3em;
+            float: left;
+            margin-right: 0.1em;
+            line-height: 1;
+            font-family: 'Noto Serif SC', serif;
+            font-weight: bold;
+            color: #b45309; /* Amber-700 */
+        }
+    </style>
+    
+    <!-- Tailwind 自定义配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        stone: { 50: '#fafaf9', 100: '#f5f5f4', 200: '#e7e5e4', 800: '#292524', 900: '#1c1917' },
+                        amber: { 500: '#f59e0b', 700: '#b45309', 900: '#78350f' },
+                        // 思潮代表色
+                        'thought-main': '#9f1239',   // 官方/深红
+                        'thought-lib': '#1e40af',    // 自由/深蓝
+                        'thought-new': '#065f46',    // 新左/深绿
+                        'thought-nat': '#92400e',    // 民族/赭石
+                        'thought-old': '#57534e',    // 老左/灰岩
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- 1. 图标组件系统 (SVG Inline for stability) ---
+        const Icon = ({ path, className, size = 20 }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                {path}
+            </svg>
+        );
+        const Icons = {
+            Book: (p) => <Icon {...p} path={<><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></>} />,
+            Timeline: (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>} />,
+            Users: (p) => <Icon {...p} path={<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>} />,
+            Network: (p) => <Icon {...p} path={<><rect x="16" y="16" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="9" y="2" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/><path d="M12 12V8"/></>} />,
+            Quest: (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></>} />,
+            ArrowRight: (p) => <Icon {...p} path={<><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></>} />,
+            Flip: (p) => <Icon {...p} path={<><path d="M21 9V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v4"/><path d="M3 15v4a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-4"/><path d="M12 2v20"/></>} />,
+            Search: (p) => <Icon {...p} path={<><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></>} />,
+            FileText: (p) => <Icon {...p} path={<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></>} />,
+        };
+
+        // --- 2. 核心数据挖掘 (Data Mining) ---
+
+        // 2.1 元数据与世界观
+        const metadata = {
+            bookTitle: "当代中国八种社会思潮",
+            author: "马立诚",
+            hook: "在后极权时代，当单一的真理崩塌，八种力量在舆论的斗兽场中争夺对“中国”的定义权。",
+            worldview: {
+                environment: "后改革时代 (Post-Reform Era)。这是一个信仰真空与物质丰裕并存的时代，地理上横跨沿海的商业文明与内陆的体制堡垒。社会规则由显性的“市场经济”与隐性的“政治红线”双重支配。",
+                system: "魔法系统：话语权 (Discourse Power) 与 合法性 (Legitimacy)。各派系通过发表文章、出版书籍、网络论战来施展“法术”，试图影响高层决策（通天）或动员底层民众（接地）。",
+                conflict: "“共识破裂”后的方向之争。核心冲突在于：现代化的路径是继续拥抱普世价值（向右），还是回归独特的国家主义传统（向左）？"
+            }
+        };
+
+        // 2.2 思想拟人化图谱 (Characters)
+        const thoughtsCharacters = [
+            {
+                id: 'mainstream',
+                name: '邓小平理论 (主流)',
+                archetype: 'The Pragmatic King (务实的君王)',
+                color: 'border-thought-main',
+                bg: 'bg-red-50',
+                want: '以经济绩效换取执政合法性，维持“稳定”这一最高价值。',
+                fear: '系统性崩溃（苏东剧变式的政权瓦解）。',
+                arc: '从打破僵化的革命者（1978），转变为驾驭复杂局势的统治者（1992），最终在2000年后成为各方试图通过“注释”来争夺的法统象征。',
+                allies: ['民族主义 (作为外部盾牌)', '新儒家 (作为内部粘合剂)'],
+                enemies: ['自由主义 (挑战其政治垄断)', '老左派 (挑战其经济路线)']
+            },
+            {
+                id: 'old-left',
+                name: '老左派',
+                archetype: 'The Ghost of the Past (旧时代的幽灵)',
+                color: 'border-thought-old',
+                bg: 'bg-stone-200',
+                want: '复辟计划经济与阶级斗争，回到那个“纯洁”的红色年代。',
+                fear: '“和平演变”，国家变色，私有化导致党变质。',
+                arc: '从80年代拥有生杀大权的太上皇，堕落为90年代中期写“万言书”的边缘怨妇，21世纪后借尸还魂，通过网络民粹主义重新获得底层能量。',
+                allies: ['新左派 (反市场的策略性盟友)', '民粹主义'],
+                enemies: ['自由主义 (死敌)', '主流改革派 (被视为叛徒)']
+            },
+            {
+                id: 'new-left',
+                name: '新左派',
+                archetype: 'The Critical Scholar (留洋的批判者)',
+                color: 'border-thought-new',
+                bg: 'bg-emerald-50',
+                want: '超越资本主义现代性，追求经济民主与实质公平。',
+                fear: '跨国资本与国内权贵结盟，形成“新自由主义”霸权。',
+                arc: '90年代作为引入西方后学理论的象牙塔学者登场，2003年后通过介入社会运动（如郎咸平事件）获得巨大声望，逐渐从批判者转向国家主义的辩护者。',
+                allies: ['老左派', '民族主义', '国家主义'],
+                enemies: ['自由主义 (关于腐败根源是市场还是权力的根本分歧)']
+            },
+            {
+                id: 'liberalism',
+                name: '自由主义',
+                archetype: 'The Enlightenment Sage (启蒙的智者)',
+                color: 'border-thought-lib',
+                bg: 'bg-blue-50',
+                want: '把权力关进笼子，落实宪法承诺的公民权利与私有产权。',
+                fear: '利维坦（不受制约的国家机器）吞噬个体自由。',
+                arc: '80年代的混沌启蒙，90年代末形成清晰学理，2003年维权运动达到行动高潮，2008年后在民族主义狂欢中遭遇污名化，沦为“带路党”。',
+                allies: ['民主社会主义 (体制内盟友)'],
+                enemies: ['新左派', '老左派', '民族主义 (最大的民间对手)']
+            },
+            {
+                id: 'nationalism',
+                name: '民族主义',
+                archetype: 'The Berserker (狂战士)',
+                color: 'border-thought-nat',
+                bg: 'bg-orange-50',
+                want: '洗雪百年耻辱，获得大国尊严与万邦来朝的地位。',
+                fear: '再次被西方列强欺辱，国家分裂。',
+                arc: '90年代初作为官方填补信仰真空的替代品，90年代末通过《中国可以说不》转向民间自发，2008年后成为压倒性的社会底色。',
+                allies: ['主流意识形态', '新左派'],
+                enemies: ['自由主义 (被视为西方的走狗)']
+            }
+        ];
+
+        // 2.3 超详尽时间线 (Master Timeline)
+        const timelineNodes = [
+            { year: '1978', title: '真理标准大讨论', desc: '【序幕：诸神之战前夜】此时“八种思潮”尚未分化，唯一的冲突是“凡是派”与“实事求是派”。通过《光明日报》的文章，邓小平成功解构了毛泽东思想的绝对神圣性，为后续所有思潮的诞生撕开了一道口子。', effect: '确立了“实践”作为最高仲裁者，中国从神学时代进入世俗时代。' },
+            { year: '1980s', title: '文化热与新启蒙', desc: '【潜伏期】萨特、尼采、弗洛伊德涌入。自由主义以“人道主义马克思主义”的面目出现。李泽厚、刘再复等学者主导了话语权，全社会沉浸在一种浪漫的、理想主义的“思想解放”氛围中。', effect: '孕育了自由主义的胚胎，但也埋下了激进情绪的种子。' },
+            { year: '1992', title: '邓小平南方谈话', desc: '【第一幕高潮：定海神针】面对1989年后的政治严冬和老左派“姓社姓资”的疯狂围剿，88岁的邓小平以“谁不改革谁下台”的雷霆手段，强行将国家航船扭回市场经济航道。', effect: '终结了计划经济的回潮可能，开启了商业主义狂飙突进的时代，知识分子开始分化。' },
+            { year: '1995', title: '“万言书”连发', desc: '【反击】老左派意识到大势已去，集结残部，连续发布《影响我国国家安全的若干因素》等四份万言书，痛陈私有化导致“资产阶级在党内产生”，试图在十五大前扭转乾坤。', effect: '虽未能改变官方路线，但其“反腐败、反私有化”的论述开始在失意阶层中获得共鸣。' },
+            { year: '1997', title: '自由主义与新左派决裂', desc: '【分化】汪晖发表《当代中国的思想状况与现代性问题》。他不再从旧体制寻找资源，而是引用西方后学批判“资本”与“市场”。自由派学者（朱学勤、徐友渔）对此震惊并反击。', effect: '知识界维持了近20年的“反左”统一战线彻底崩塌，左右之争取代新旧之争成为主旋律。' },
+            { year: '1998', title: '《中国可以说不》畅销', desc: '【异军突起】几位名不见经传的青年作者，用粗糙但极具煽动性的语言宣泄反美情绪。这标志着民族主义从官方的爱国主义教育，异化为民间的排外情绪。', effect: '预示了“愤青”群体的崛起，情感逻辑开始压倒理性逻辑。' },
+            { year: '1999', title: '使馆被炸案', desc: '【催化剂】北约轰炸中国驻南联盟使馆。大学生走上街头，愤怒地投掷石块。自由主义者关于“人权高于主权”的论调在这一刻显得苍白无力。', effect: '民族主义情绪第一次大规模洗礼，为后来的网络民族主义奠定了心理基础。' },
+            { year: '2001', title: '加入WTO', desc: '【全球化时刻】中国正式入世。自由派欢呼这是“以开放倒逼改革”的胜利，新左派则哀叹中国沦为全球资本主义的打工仔。', effect: '中国经济起飞，但“血汗工厂”与“世界工厂”的双重身份加剧了国内阶级撕裂。' },
+            { year: '2003', title: '孙志刚案', desc: '【第二幕高潮：自由派的高光】大学生孙志刚之死引发全民愤怒。许志永、滕彪等三博士上书人大，成功废除收容遣送制度。媒体、法律界、知识界形成了完美的“铁三角”互动。', effect: '“维权”成为年度热词，自由主义从书斋走向街头，试图通过个案推动制度改良。' },
+            { year: '2004', title: '郎咸平旋风', desc: '【逆转】郎咸平炮轰海尔、TCL等国企改革是“瓜分国资”。新左派全力声援，并与底层民粹情绪合流。自由派经济学家试图辩解却被骂为“权贵走狗”。', effect: '国企MBO被叫停。话语权发生历史性逆转，公众对“市场”的迷信破灭，开始呼唤“强人”与“国家”。' },
+            { year: '2005', title: '物权法之争', desc: '【阻击】北大教授巩献田发表公开信，指责物权法草案违宪，“保护了非法所得”。老左派与新左派联手，成功阻碍了立法的进程。', effect: '显示了左翼思潮在立法层面的实际阻挠能力，意识形态对经济理性的干扰依然强大。' },
+            { year: '2007', title: '谢韬与民主社会主义', desc: '【体制内异响】《炎黄春秋》发表谢韬文章，主张“民主社会主义”才是马克思主义正统。这代表了党内改革派试图绕过西方自由主义，从老祖宗那里寻找民主合法性的尝试。', effect: '在离退休高干中引发震动，但未能进入核心决策圈。' },
+            { year: '2008', title: '奥运火炬与家乐福事件', desc: '【第三幕高潮：大国崛起】围绕西藏3.14与火炬传递，爆发全球范围的华人抗议。国内青年自发抵制家乐福。“四月青年”诞生，他们自信、反西、拥护体制。', effect: '“中国模式论”兴起，西方普世价值祛魅。民族主义彻底压倒自由主义，成为社会底色。' },
+            { year: '2008', title: '08宪章 (书中隐晦提及)', desc: '【禁忌】自由派知识分子的一次集体冒险，试图系统性提出宪政改革纲领。', effect: '遭到了雷霆手段的压制，自由派组织化力量被粉碎，从此转入原子化和低潮。' },
+            { year: '2009', title: '通钢事件', desc: '【暴力民粹】吉林通化钢铁公司工人在改制过程中，愤怒打死了民营企业派驻的总经理。', effect: '民粹主义展现了其血腥的一面，阶级仇恨已经积累到了临界点。' },
+            { year: '2010', title: '重庆模式', desc: '【左翼实验】薄熙来在重庆推行“唱红打黑”与民生新政，受到了老左派与新左派的热烈追捧，被视为“中国道路”的新样板。', effect: '思想之争直接介入了高层权力的角逐，思潮政治化达到顶峰。' },
+            { year: '2011', title: '孔子像的立与废', desc: '【彷徨】天安门广场竖立孔子像，百日后又悄然搬离。这象征了官方对“新儒家”既想利用其维稳功能，又警惕其挑战红色法统的矛盾心态。', effect: '传统文化复兴成为新的政治变量，但位置尴尬。' },
+            { year: '2012', title: '结局：未完的博弈', desc: '【尾声】随着十八大的临近和重庆的变局，中国站在了新的十字路口。八种思潮的博弈没有结束，而是以更隐蔽、更激烈的方式进入了新时代。', effect: '旧的共识彻底终结，新的共识尚未形成。' }
+        ];
+
+        // 2.4 章节深度剧情 (Deep Dive Chapters)
+        const chapterDetails = [
+            {
+                id: 'chap_mainstream',
+                title: '主流思潮：邓小平理论的守成与困境',
+                beats: [
+                    { label: '激励事件', text: '1978年真理标准大讨论，打破凡是派枷锁。' },
+                    { label: '危机', text: '1989-1991年，苏东剧变，国内保守派围剿改革。' },
+                    { label: '高潮', text: '1992年南方谈话，确立社会主义市场经济。' },
+                    { label: '结局', text: '成为绝对主流，但在解决贫富差距和腐败问题上理论资源枯竭。' }
+                ],
+                foreshadowing: '“让一部分人先富起来”埋下了日后阶级撕裂的伏笔；“不争论”埋下了思想界共识破裂的伏笔。'
+            },
+            {
+                id: 'chap_oldleft',
+                title: '老左派：从庙堂之高到江湖之远',
+                beats: [
+                    { label: '激励事件', text: '改革开放触动了旧体制既得利益者和意识形态卫道士的神经。' },
+                    { label: '危机', text: '市场经济的确立使其失去了理论合法性。' },
+                    { label: '高潮', text: '1995-1997年万言书事件，试图通过“讲政治”反攻倒算。' },
+                    { label: '结局', text: '官方层面失败，但成功转型为民粹主义的幕后推手。' }
+                ],
+                foreshadowing: '他们对“资产阶级复辟”的预言，在腐败高发期被部分底层民众重新拾起。'
+            },
+            {
+                id: 'chap_conflict',
+                title: '自由主义 vs 新左派：世纪之辩',
+                beats: [
+                    { label: '激励事件', text: '1997年汪晖文章发表，不仅批判体制，更批判市场。' },
+                    { label: '危机', text: '长江《读书》奖事件，双方撕破脸皮，学理之争演变为道德指控。' },
+                    { label: '高潮', text: '2004年郎咸平旋风，新左派利用民意完胜自由派精英。' },
+                    { label: '结局', text: '自由主义在舆论场失势，新左派占据道德高地但逐渐国家主义化。' }
+                ],
+                foreshadowing: '这场辩论忽视了中间温和派的声音，导致社会舆论极化，为网络暴力的兴起铺平了道路。'
+            }
+        ];
+
+        // 2.5 核心任务链 (Quest Logic)
+        const questChain = [
+            {
+                stage: 'Quest 1: The Legitimacy (1978-1992)',
+                title: '寻找合法性：吃饱饭与不争论',
+                protagonist: '改革派 (邓小平)',
+                obstacle: '老左派意识形态 (姓社姓资)',
+                solution: '南方谈话：用经济绩效替代意识形态合法性。',
+                reward: '30年经济奇迹，但失去了精神家园。'
+            },
+            {
+                stage: 'Quest 2: The Justice (1993-2003)',
+                title: '寻找公正：权力与资本的博弈',
+                protagonist: '自由派 (程序正义) vs 新左派 (实质正义)',
+                obstacle: '腐败、下岗、贫富分化',
+                solution: '维稳体制下的“和谐社会”建设（折中方案）。',
+                reward: '表面稳定，但深层矛盾被掩盖。'
+            },
+            {
+                stage: 'Quest 3: The Identity (2008-2012)',
+                title: '寻找认同：大国崛起的心理代偿',
+                protagonist: '民族主义者 & 国家主义者',
+                obstacle: '西方普世价值叙事',
+                solution: '构建“中国模式”叙事，强调特殊性。',
+                reward: '强大的社会动员能力，但也带来了排外与自大的风险。'
+            }
+        ];
+
+        // --- 3. React 组件构建 ---
+
+        // 3.1 侧边栏导航
+        const Sidebar = ({ activeTab, setActiveTab }) => {
+            const menuItems = [
+                { id: 'overview', label: '概览与世界观', icon: Icons.Book },
+                { id: 'characters', label: '人物/思潮图谱', icon: Icons.Users },
+                { id: 'timeline', label: '史诗时间线', icon: Icons.Timeline },
+                { id: 'deepdive', label: '深度剧情解析', icon: Icons.FileText },
+                { id: 'quests', label: '核心任务链', icon: Icons.Quest },
+                { id: 'mermaid', label: '派系关系网', icon: Icons.Network },
+            ];
+
+            return (
+                <div className="w-20 md:w-64 bg-stone-900 text-stone-300 h-screen fixed left-0 top-0 flex flex-col border-r border-stone-800 shadow-2xl z-50 transition-all duration-300">
+                    <div className="p-4 md:p-6 border-b border-stone-700 flex items-center justify-center md:justify-start gap-3">
+                        <div className="w-8 h-8 bg-stone-100 rounded-sm flex items-center justify-center text-stone-900 font-serif font-bold text-xl">八</div>
+                        <h1 className="hidden md:block font-serif font-bold text-lg text-stone-50 leading-tight">当代中国<br/>八种社会思潮</h1>
+                    </div>
+                    <nav className="flex-1 overflow-y-auto py-4 space-y-2">
+                        {menuItems.map(item => (
+                            <button
+                                key={item.id}
+                                onClick={() => setActiveTab(item.id)}
+                                className={`w-full flex items-center px-4 md:px-6 py-4 transition-all duration-200 group relative
+                                    ${activeTab === item.id ? 'bg-stone-800 text-amber-500 border-l-4 border-amber-500' : 'hover:bg-stone-800 hover:text-stone-100'}`}
+                            >
+                                <item.icon className={`flex-shrink-0 ${activeTab === item.id ? 'text-amber-500' : 'text-stone-500 group-hover:text-stone-300'}`} />
+                                <span className="hidden md:block ml-3 font-medium text-sm tracking-wide">{item.label}</span>
+                            </button>
+                        ))}
+                    </nav>
+                    <div className="p-4 border-t border-stone-800 hidden md:block">
+                        <div className="text-xs text-stone-600 font-mono">
+                            ARCHIVE_ID: 978-7-5097<br/>
+                            ACCESS: GRANTED
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // 3.2 概览模块
+        const OverviewSection = () => (
+            <div className="max-w-4xl mx-auto space-y-12 animate-fade-in pb-20">
+                <header className="border-b-2 border-stone-800 pb-8">
+                    <h2 className="text-4xl md:text-5xl font-serif font-bold text-stone-900 mb-6">{metadata.bookTitle}</h2>
+                    <div className="flex flex-wrap gap-4 text-sm font-bold uppercase tracking-widest text-stone-500 mb-6">
+                        <span>{metadata.author}</span>
+                        <span>•</span>
+                        <span>思想史</span>
+                        <span>•</span>
+                        <span>2012</span>
+                    </div>
+                    <div className="bg-stone-900 text-stone-50 p-6 md:p-10 rounded-sm shadow-xl relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-32 bg-stone-800 rounded-full blur-3xl opacity-20 -mr-16 -mt-16"></div>
+                        <h3 className="text-xl font-bold mb-4 flex items-center gap-2 text-amber-500">
+                            <Icons.Search className="text-amber-500"/> 核心钩子 (The Hook)
+                        </h3>
+                        <p className="text-xl md:text-2xl font-serif leading-relaxed italic text-stone-200">
+                            “{metadata.hook}”
+                        </p>
+                    </div>
+                </header>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="bg-white p-8 border-t-4 border-stone-800 shadow-sm hover:shadow-md transition-shadow">
+                        <h3 className="font-bold text-xl mb-4 text-stone-900 font-serif">世界观设定</h3>
+                        <p className="text-stone-600 leading-relaxed text-justify prose">
+                            {metadata.worldview.environment}
+                        </p>
+                        <div className="mt-6 pt-6 border-t border-stone-100">
+                            <span className="text-xs font-bold text-stone-400 uppercase">System (Magic)</span>
+                            <p className="text-stone-800 font-medium mt-1">{metadata.worldview.system}</p>
+                        </div>
+                    </div>
+                    <div className="bg-white p-8 border-t-4 border-red-800 shadow-sm hover:shadow-md transition-shadow">
+                        <h3 className="font-bold text-xl mb-4 text-red-900 font-serif">核心冲突</h3>
+                        <p className="text-stone-600 leading-relaxed text-justify prose">
+                            {metadata.worldview.conflict}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        );
+
+        // 3.3 人物卡片模块
+        const CharacterCard = ({ char }) => {
+            const [isFlipped, setIsFlipped] = useState(false);
+
+            return (
+                <div 
+                    className="group h-96 w-full cursor-pointer perspective-1000"
+                    onClick={() => setIsFlipped(!isFlipped)}
+                >
+                    <div className={`relative w-full h-full duration-700 transform-style-3d transition-transform ${isFlipped ? 'rotate-y-180' : ''}`}>
+                        {/* Front Side */}
+                        <div className={`absolute w-full h-full backface-hidden bg-white p-8 shadow-md border-l-8 ${char.color} flex flex-col justify-between`}>
+                            <div>
+                                <div className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-2">{char.archetype}</div>
+                                <h3 className="text-2xl font-bold font-serif mb-4 text-stone-900">{char.name}</h3>
+                                <p className="text-stone-600 leading-relaxed">{char.want}</p>
+                            </div>
+                            <div className="flex justify-between items-end">
+                                <div className={`w-12 h-12 rounded-full ${char.bg} flex items-center justify-center`}>
+                                    <Icons.Users className="text-stone-700 opacity-50"/>
+                                </div>
+                                <div className="flex items-center text-xs text-stone-400 gap-1 animate-pulse">
+                                    <Icons.Flip size={14} /> 点击查看侧写
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Back Side */}
+                        <div className={`absolute w-full h-full backface-hidden bg-stone-900 text-stone-300 p-8 shadow-xl rotate-y-180 flex flex-col justify-center`}>
+                            <h4 className="text-amber-500 font-bold text-sm uppercase mb-4 tracking-widest">心理侧写</h4>
+                            <div className="space-y-4 text-sm">
+                                <div>
+                                    <span className="text-stone-500 block text-xs uppercase mb-1">内在恐惧 (Fear)</span>
+                                    <p className="text-stone-100">{char.fear}</p>
+                                </div>
+                                <div>
+                                    <span className="text-stone-500 block text-xs uppercase mb-1">人物弧光 (Arc)</span>
+                                    <p className="text-stone-100">{char.arc}</p>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <span className="text-stone-500 block text-xs uppercase mb-1">盟友</span>
+                                        <p className="text-emerald-400 font-bold">{char.allies.join(', ')}</p>
+                                    </div>
+                                    <div>
+                                        <span className="text-stone-500 block text-xs uppercase mb-1">敌对</span>
+                                        <p className="text-red-400 font-bold">{char.enemies.join(', ')}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const CharactersSection = () => (
+            <div className="max-w-6xl mx-auto space-y-8 animate-fade-in pb-20">
+                <header>
+                    <h2 className="text-3xl font-serif font-bold text-stone-900 mb-2">思潮拟人化图谱</h2>
+                    <p className="text-stone-500">点击卡片查看每种思潮的内在恐惧与演变弧光。</p>
+                </header>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {thoughtsCharacters.map(char => <CharacterCard key={char.id} char={char} />)}
+                </div>
+            </div>
+        );
+
+        // 3.4 时间线模块
+        const TimelineSection = () => {
+            const [expandedId, setExpandedId] = useState(null);
+
+            return (
+                <div className="max-w-4xl mx-auto animate-fade-in pb-20">
+                    <header className="mb-12">
+                        <h2 className="text-3xl font-serif font-bold text-stone-900 mb-2">史诗时间线</h2>
+                        <p className="text-stone-500">1978 - 2012：十八个决定中国命运的瞬间。</p>
+                    </header>
+                    <div className="relative border-l-2 border-stone-300 ml-4 md:ml-0 md:pl-0 space-y-8">
+                        {timelineNodes.map((node, idx) => (
+                            <div key={idx} className="relative group md:grid md:grid-cols-12 md:gap-8 items-start">
+                                {/* Year - Desktop Left */}
+                                <div className="hidden md:block md:col-span-2 text-right pt-1">
+                                    <span className="font-serif font-bold text-2xl text-stone-400 group-hover:text-stone-900 transition-colors">{node.year}</span>
+                                </div>
+                                
+                                {/* Dot */}
+                                <div className="absolute -left-[9px] top-2 w-5 h-5 rounded-full border-4 border-stone-100 bg-stone-400 group-hover:bg-amber-600 transition-colors md:left-auto md:right-auto md:relative md:col-span-1 md:flex md:justify-center md:items-center md:bg-transparent md:border-none md:p-0">
+                                    <div className="hidden md:block w-4 h-4 rounded-full bg-stone-300 group-hover:bg-amber-600 transition-colors"></div>
+                                </div>
+
+                                {/* Content Card */}
+                                <div 
+                                    className={`ml-8 md:ml-0 md:col-span-9 bg-white rounded shadow-sm border border-stone-100 transition-all duration-300 overflow-hidden cursor-pointer
+                                    ${expandedId === idx ? 'ring-2 ring-amber-500 shadow-lg' : 'hover:shadow-md hover:border-amber-200'}`}
+                                    onClick={() => setExpandedId(expandedId === idx ? null : idx)}
+                                >
+                                    <div className="p-6">
+                                        <div className="md:hidden text-sm font-bold text-stone-400 mb-1">{node.year}</div>
+                                        <div className="flex justify-between items-center mb-3">
+                                            <h3 className="text-lg font-bold text-stone-900">{node.title}</h3>
+                                            <Icons.ArrowRight size={16} className={`text-stone-400 transition-transform ${expandedId === idx ? 'rotate-90' : ''}`}/>
+                                        </div>
+                                        
+                                        <div className={`text-stone-600 text-sm leading-relaxed text-justify prose transition-all duration-500 ${expandedId === idx ? 'max-h-96 opacity-100' : 'max-h-20 opacity-80 line-clamp-3'}`}>
+                                            {node.desc}
+                                        </div>
+                                        
+                                        {expandedId === idx && (
+                                            <div className="mt-4 pt-4 border-t border-stone-100 bg-stone-50 -mx-6 -mb-6 p-4 text-xs text-stone-500 flex gap-2 animate-fadeIn">
+                                                <Icons.ArrowRight size={14} className="flex-shrink-0 mt-0.5 text-amber-600" />
+                                                <span><strong className="text-amber-700">蝴蝶效应：</strong>{node.effect}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        // 3.5 深度剧情解析模块 (New)
+        const DeepDiveSection = () => (
+            <div className="max-w-5xl mx-auto animate-fade-in pb-20">
+                <header className="mb-12">
+                    <h2 className="text-3xl font-serif font-bold text-stone-900 mb-2">分卷深度剧情</h2>
+                    <p className="text-stone-500">叙事节拍与伏笔回收。</p>
+                </header>
+                <div className="grid gap-8">
+                    {chapterDetails.map((chap) => (
+                        <div key={chap.id} className="bg-white p-8 rounded-lg shadow-sm border-t-4 border-stone-800">
+                            <h3 className="text-2xl font-serif font-bold text-stone-900 mb-6">{chap.title}</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                                {chap.beats.map((beat, i) => (
+                                    <div key={i} className="bg-stone-50 p-4 rounded border border-stone-100 relative overflow-hidden">
+                                        <div className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-2">{beat.label}</div>
+                                        <p className="text-stone-800 text-sm font-medium">{beat.text}</p>
+                                        <div className="absolute -right-2 -bottom-4 text-6xl font-serif text-stone-200 opacity-20 pointer-events-none">{i+1}</div>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="bg-amber-50 p-4 rounded border border-amber-100 flex gap-3">
+                                <Icons.Search className="text-amber-600 flex-shrink-0 mt-1" />
+                                <div>
+                                    <span className="text-xs font-bold text-amber-800 uppercase">伏笔回收</span>
+                                    <p className="text-amber-900 text-sm mt-1">{chap.foreshadowing}</p>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+
+        // 3.6 任务链模块
+        const QuestsSection = () => (
+            <div className="max-w-5xl mx-auto space-y-12 animate-fade-in pb-20">
+                <header>
+                    <h2 className="text-3xl font-serif font-bold text-stone-900 mb-2">主要任务/目标链</h2>
+                    <p className="text-stone-500">将三十年思想史解构为三幕剧式的大型任务。</p>
+                </header>
+                <div className="space-y-8">
+                    {questChain.map((quest, idx) => (
+                        <div key={idx} className="bg-white rounded-lg border border-stone-200 overflow-hidden shadow-sm">
+                            <div className="bg-stone-900 text-stone-100 px-6 py-4 flex justify-between items-center">
+                                <h3 className="font-bold tracking-wide text-amber-500">{quest.stage}</h3>
+                                <Icons.Quest className="text-stone-400" />
+                            </div>
+                            <div className="p-6 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="space-y-6">
+                                    <div>
+                                        <span className="text-xs font-bold text-stone-400 uppercase tracking-widest">Main Goal</span>
+                                        <div className="text-2xl font-serif font-bold text-stone-800 mt-2">{quest.title}</div>
+                                    </div>
+                                    <div className="flex gap-4">
+                                        <div className="flex-1">
+                                            <span className="text-xs font-bold text-stone-400 uppercase">Protagonist</span>
+                                            <div className="text-sm font-bold text-emerald-700 mt-1">{quest.protagonist}</div>
+                                        </div>
+                                        <div className="flex-1">
+                                            <span className="text-xs font-bold text-stone-400 uppercase">Obstacle</span>
+                                            <div className="text-sm font-bold text-red-700 mt-1">{quest.obstacle}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="space-y-4 border-l-0 md:border-l border-stone-100 md:pl-8">
+                                    <div className="relative">
+                                        <div className="absolute top-0 left-0 w-1 h-full bg-amber-500 rounded-full"></div>
+                                        <div className="pl-4">
+                                            <span className="text-xs font-bold text-stone-400 uppercase">Final Solution</span>
+                                            <p className="text-stone-800 font-medium">{quest.solution}</p>
+                                        </div>
+                                    </div>
+                                    <div className="relative">
+                                        <div className="absolute top-0 left-0 w-1 h-full bg-stone-300 rounded-full"></div>
+                                        <div className="pl-4">
+                                            <span className="text-xs font-bold text-stone-400 uppercase">Reward / Price</span>
+                                            <p className="text-stone-600 text-sm leading-relaxed">{quest.reward}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+
+        // 3.7 Mermaid 图表组件
+        const MermaidSection = () => {
+            const chartRef1 = useRef(null);
+            const chartRef2 = useRef(null);
+
+            const graphData1 = `
+                graph TD
+                    Center((八种思潮))
+                    
+                    subgraph 官方 [体制内]
+                        Main[邓小平理论]:::main
+                        DemSoc[民主社会主义]:::lib
+                    end
+                    
+                    subgraph 民间右翼 [自由派]
+                        Lib[自由主义]:::lib
+                        Conf[新儒家]:::nat
+                    end
+                    
+                    subgraph 民间左翼 [批判派]
+                        NewLeft[新左派]:::new
+                        OldLeft[老左派]:::old
+                        Pop[民粹主义]:::old
+                        Nat[民族主义]:::nat
+                    end
+
+                    Main --压制--> OldLeft
+                    Main --压制--> Lib
+                    Main --吸纳--> Nat
+                    
+                    NewLeft --批判--> Lib
+                    NewLeft --合流--> Pop
+                    NewLeft --合流--> Nat
+                    
+                    OldLeft --寄生--> Pop
+                    
+                    Lib --批判--> Main
+                    Lib --敌对--> NewLeft
+                    
+                    classDef main fill:#9f1239,stroke:#fff,color:#fff
+                    classDef lib fill:#1e40af,stroke:#fff,color:#fff
+                    classDef new fill:#065f46,stroke:#fff,color:#fff
+                    classDef nat fill:#92400e,stroke:#fff,color:#fff
+                    classDef old fill:#57534e,stroke:#fff,color:#fff
+            `;
+
+            const graphData2 = `
+                flowchart LR
+                    Start(共识破裂) --> Conflict{核心矛盾}
+                    Conflict -- 市场化导致不公 --> NewLeft[新左派方案:国家干预]
+                    Conflict -- 权力导致不公 --> Lib[自由派方案:宪政法治]
+                    
+                    NewLeft --> Res1[郎咸平旋风]
+                    Lib --> Res2[维权运动]
+                    
+                    Res1 --> State[国家主义回潮]
+                    Res2 --> Suppress[遭受打压]
+                    
+                    State --> End((中国模式))
+                    Suppress --> End
+            `;
+
+            useEffect(() => {
+                mermaid.initialize({ startOnLoad: true, theme: 'base', themeVariables: { fontFamily: 'Noto Sans SC', fontSize: '14px' } });
+                
+                const renderChart = async (id, code, ref) => {
+                    if (ref.current) {
+                        try {
+                            ref.current.innerHTML = ''; 
+                            const { svg } = await mermaid.render(id, code);
+                            ref.current.innerHTML = svg;
+                        } catch (error) {
+                            console.error('Mermaid render error:', error);
+                            ref.current.innerHTML = '<div class="text-red-500 text-sm p-4 border border-red-200 bg-red-50 rounded">图表渲染失败，请刷新页面重试。</div>';
+                        }
+                    }
+                };
+
+                setTimeout(() => {
+                    renderChart('mermaid-1', graphData1, chartRef1);
+                    renderChart('mermaid-2', graphData2, chartRef2);
+                }, 500);
+            }, []);
+
+            return (
+                <div className="max-w-6xl mx-auto space-y-12 animate-fade-in pb-20">
+                    <header>
+                        <h2 className="text-3xl font-serif font-bold text-stone-900 mb-2">交互式数据图表</h2>
+                        <p className="text-stone-500">派系关系网与历史博弈流程。</p>
+                    </header>
+                    
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div className="bg-white p-6 rounded shadow-sm border border-stone-200">
+                            <h3 className="font-bold text-stone-800 mb-4 border-b pb-2 flex items-center gap-2">
+                                <Icons.Network size={16}/> 思想派系关系网 (Faction Graph)
+                            </h3>
+                            <div ref={chartRef1} className="mermaid flex justify-center overflow-x-auto" />
+                        </div>
+                        
+                        <div className="bg-white p-6 rounded shadow-sm border border-stone-200">
+                            <h3 className="font-bold text-stone-800 mb-4 border-b pb-2 flex items-center gap-2">
+                                <Icons.Timeline size={16}/> 核心矛盾流程图 (Conflict Flow)
+                            </h3>
+                            <div ref={chartRef2} className="mermaid flex justify-center overflow-x-auto" />
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- 4. 主应用入口 ---
+        const App = () => {
+            const [activeTab, setActiveTab] = useState('overview');
+
+            const renderContent = () => {
+                switch(activeTab) {
+                    case 'overview': return <OverviewSection />;
+                    case 'characters': return <CharactersSection />;
+                    case 'timeline': return <TimelineSection />;
+                    case 'deepdive': return <DeepDiveSection />;
+                    case 'quests': return <QuestsSection />;
+                    case 'mermaid': return <MermaidSection />;
+                    default: return <OverviewSection />;
+                }
+            };
+
+            return (
+                <div className="flex h-screen w-full bg-stone-100">
+                    <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+                    
+                    <main className="flex-1 h-full overflow-y-auto custom-scrollbar md:ml-64 relative">
+                        {/* Top decorative bar */}
+                        <div className="h-2 w-full bg-stone-900 sticky top-0 z-40"></div>
+                        
+                        <div className="p-6 md:p-12 lg:p-16 min-h-full">
+                            {renderContent()}
+                        </div>
+
+                        {/* Footer */}
+                        <footer className="p-8 text-center text-stone-400 text-xs font-serif border-t border-stone-200 mt-auto">
+                            <p>Digitally Archived for Research Purposes.</p>
+                            <p className="mt-1">Generated by Senior Literary Critic & Full-Stack AI.</p>
+                        </footer>
+                    </main>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

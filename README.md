@@ -1,6 +1,6 @@
-# 红色赌盘 - 深度解析
+# 深度阅读档案馆
 
-这是一个关于《红色赌盘》(Red Roulette) 的深度分析网页项目，通过 GitHub Pages 部署为独立的在线阅读页面。
+这是一个书籍与思想深度分析网页项目，通过 GitHub Pages 部署为独立的在线阅读页面。
 
 ## 在线访问
 
@@ -8,11 +8,18 @@
 
 ### 页面列表
 
+#### 红色赌盘系列
+
 - **章节详细版**：[red-roulette-chapters.html](https://exposir.github.io/book-pages/red-roulette-chapters.html)
   多章节导航式深度解析，包含：封面、核心人物、温家宝专题、平安保险案、机场物流案、编年史、结局等独立页面
 
 - **时间线分析版**：[red-roulette-timeline.html](https://exposir.github.io/book-pages/red-roulette-timeline.html)
   可视化分析版本，包含：关系网图（Mermaid）、全景时间线、剧情解析、任务链等分析工具
+
+#### 思想史系列
+
+- **八种社会思潮档案**：[eight-thoughts-archive.html](https://exposir.github.io/book-pages/eight-thoughts-archive.html)
+  当代中国八种社会思潮深度全景档案，包含：历史编年、思潮分析、关键事件、代表人物等内容
 
 ## 项目特点
 
